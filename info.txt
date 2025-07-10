@@ -1,0 +1,67 @@
+1. PREPARAR HTML, CSS Y JAVASCRIPT y DESCARGAR node.js (Si no está instalado)
+
+2. PREPARAR EL ENTORNO SERVIDOR
+
+- Desde la línea de comandos (Consola/CMD) ir dentro del directorio del proyecto (Alex):
+
+	npm init -y
+   Esto crea un archivo package.json
+
+
+- Instalar las librerías necesarias ejecutando:
+
+	npm install express @google/generative-ai dotenv cors
+
+   express: Para crear el servidor web.
+
+   @google/generative-ai: El kit oficial de Google para usar Gemini.
+
+   dotenv: Para manejar tu API key de forma segura.
+
+   cors: Para permitir que tu frontend (en index.html) se comunique con tu backend.
+
+
+
+3. OBTENER LA API KEY DE GEMINI
+
+	https://aistudio.google.com/app/apikey
+
+- Generar API KEY
+- Guardarla en un fichero llamado .env
+- Luego crear otro fichero .gitignore (Para evitar que la clave se suba a GitHub por accidente)
+
+
+4. ESCRIBIR EL CÓDIGO SERVIDOR
+
+	server.js
+
+
+5. CONECTAR TODO
+
+	Haremos que el frontend y el backend hablen entre sí
+	Reemplazar scriptPrimero por script (Escribir nuevo script)
+
+
+6. PROBARLO
+	Funciona a nivel de escribir el mensaje, y da la respuesta escrita y con voz
+
+
+7. PEDIR POR VOZ
+	- Primero incluimos un botón en el HTML para el micro
+	- Añadir la lógica de reconocimiento en script.js (Detectará cuando pulsas el micro,
+		escuchará la voz, la convertirá a texto y la pondrá en la caja input para enviarla)
+	- Ahora script.js pasará a llamarse scriptSegundo.js
+	- Ya podemos pedir por voz a nuestro Alex
+
+
+8. COMPARTIR PÁGINA CON ALEX (Co-Browse)
+	- Añadir a HTML
+	- Añadir a CSS lo añadido en HTML
+	- la clase .resaltado-Gemini se añadirá después usando JavaScript
+	- Reemplazar el código server.js (Ahora será serverPrimero.js)
+
+	- Hacer que el Frontend obedezca las órdenes (script.js)
+	- Actualizar script.js para que pueda entender si la respuesta de Álex es texto o un JSON con una órden
+	   Se modificará la función sendMessage y se añadirá la función ejecutarAccion
+	   El resto de script quedará igual. (Ahora scriptTercero.js)
+	- Reiniciar server.js y probar cambios
