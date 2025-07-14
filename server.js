@@ -2,6 +2,7 @@ const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const ElevenLabs = require('elevenlabs-node');
 
 dotenv.config(); // Carga las variables de entorno (la API key)
 
@@ -16,7 +17,11 @@ app.use(express.json()); // Permite al servidor entender JSON
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-// INSTRUCCIÓN DEL SISTEMA: Aquí le enseñamos a Gemini sus capacidades
+const elevenLabs = new ElevenLabs({
+    apiKey: process.env.ELEVENLABS_API_KEY,
+});
+
+// INSTRUCCIÓN DEL SISTEMA: Aquí le enseñamos a Gemini sus capacidades (Prompt)
 const systemInstruction = `
 Eres "Guía Web", el asistente interactivo de esta página. Tu misión es ayudar a los usuarios a navegar, ver y leer el contenido de la página de forma clara y accesible. Tu tono debe ser amable, directo y servicial.
 La página está dividida en las siguientes secciones:
@@ -67,16 +72,28 @@ app.post('/chat', async (req, res) => {
             ]
         });
 
+        // Recogemos la respuesta de texto de Gemini
         const result = await chat.sendMessage(message);
         const response = await result.response;
-        const text = response.text();
-        
-        // No necesitamos enviar JSON al frontend, solo el texto que Gemini genera.
-        // El frontend se encargará de ver si es un JSON o texto plano.
-        res.json({ reply: text });
+        const textReplyFromGemini = response.text();
+
+        // Convertir el texto a audio con ElevenLabs
+        const audioStream = await elevenLabs.textToSpeechStream({
+            textInput: textReplyFromGemini,
+            voiceId: "Nh2zY9kknu6z4pZy6FhD", //Voz de David Martín
+            modelId: "eleven_multilingual_v2",
+            voiceSettings: {
+                stability: 0.5,
+                similarityBoost: 0.75,
+            },
+        });
+
+        // Enviar el audio como respuesta al frontend
+        res.setHeader('Content-Type', 'audio/mpeg');
+        audioStream.pipe(res);
 
     } catch (error) {
-        console.error('Error al contactar la API de Gemini:', error);
+        console.error('Error al contactar las APIs: ', error);
         res.status(500).json({ error: 'No se pudo obtener una respuesta.' });
     }
 });

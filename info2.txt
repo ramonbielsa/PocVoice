@@ -1,0 +1,10 @@
+ELEVENLABS PARA VOZ REALISTA (Sustituir la voz del navegador, mejora para compatibilidad de navegador de usuario)
+
+pip install elevenlabs
+npm install @elevenlabs/elevenlabs-js
+npm install elevenlabs-node
+
+- Añadir API ElevenLabs a .env
+
+-
+Actualizamos el código del server.js

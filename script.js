@@ -73,10 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sendMessage() {
         const userMessage = chatInput.value.trim();
         if (userMessage === '') return;
-
+    
         appendMessage(userMessage, 'user-message');
         chatInput.value = '';
-
+    
         try {
             const response = await fetch(backendUrl, {
                 method: 'POST',
@@ -85,46 +85,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ message: userMessage }),
             });
-
+    
             if (!response.ok) {
                 throw new Error('Error en la respuesta del servidor.');
             }
-
-            const data = await response.json();
-            let botReply = data.reply;
-            let action = null;
-
-            // Intentamos ver si la respuesta es un JSON con acción
-            try {
-                const parsedResponse = JSON.parse(botReply);
-                if (parsedResponse.reply && parsedResponse.action) {
-                    botReply = parsedResponse.reply;
-                    action = parsedResponse.action;
-
-                    // Buscamos el elemento que se va a resaltar para que lo de por respuesta
-                    const elemento = document.querySelector(action.selector);
-
-                    // Si el elemento existe y tiene texto, lo añadimos a la respuesta
-                    if (elemento && elemento.textContent) {
-                        botReply += '. ' + elemento.textContent.trim();
-                    }
-                }
-            } catch (e) {
-                // No era un JSON, así que es una respuesta de texto normal. No hacemos nada.
-            }
-
-            appendMessage(botReply, 'bot-message');
-            leerTexto(botReply);
-
-            // Si había una acción, la ejecutamos
-            if (action) {
-                ejecutarAccion(action);
-            }
-
+            
+            // Ya no leemos JSON. Ahora manejamos audio.
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+    
+            // Como ya no recibimos el texto, no podemos mostrarlo.
+            // Podríamos mostrar un mensaje genérico para que el usuario sepa que hay una respuesta.
+            appendMessage("...", 'bot-message');
+    
         } catch (error) {
             console.error('Error:', error);
             const errorMessage = 'Lo siento, algo salió mal. Inténtalo de nuevo.';
             appendMessage(errorMessage, 'bot-message');
+            // La función original de leerTexto() se puede dejar para leer solo los errores
             leerTexto(errorMessage);
         }
     }
