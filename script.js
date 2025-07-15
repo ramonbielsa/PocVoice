@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const micBtn = document.getElementById('mic-btn'); // Botón del micrófono
     const backendUrl = 'http://localhost:3000/chat';
+    const asistenteAlex = document.getElementById('asistente-alex');
+    const chatWrapper = document.getElementById('chat-wrapper');
+    const inputContainer = document.getElementById('input-container');
+
+    let conversationHistory = []; //Historial de la conversación (Da contexto a Gemini)
 
     // ---- Función de voz (SALIDA) ----
     function leerTexto(texto) {
@@ -75,30 +80,59 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userMessage === '') return;
     
         appendMessage(userMessage, 'user-message');
+        conversationHistory.push({role: 'user', parts: [{text: userMessage}]});
         chatInput.value = '';
+
+        // Mostrar indicador de espera (Pensando...)
+        const thinkingMessage = appendMessage("...", 'bot-message');
     
         try {
-            const response = await fetch(backendUrl, {
+            //Petición para obtener respuesta de texto
+            const textResponse = await fetch(backendUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: userMessage }),
+                body: JSON.stringify({ message: userMessage, history: conversationHistory }),
             });
     
-            if (!response.ok) {
+            if (!textResponse.ok) {
                 throw new Error('Error en la respuesta del servidor.');
             }
-            
+
+            const data = await textResponse.json();
+            const botText = data.replyText;
+
+            // Actualizar mensaje
+            thinkingMessage.querySelector('p').textContent = botText;
+            conversationHistory.push({role: 'model', parts: [{text: botText}]});
+
+            //Petición para obtener respuesta de audio
+            const audioResponse = await fetch('http://localhost:3000/text-to-speech', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: botText }),
+            });
+
+            if (!audioResponse.ok) throw new Error('Error al obtener la respuesta de audio.');
+
+
             // Ya no leemos JSON. Ahora manejamos audio.
-            const audioBlob = await response.blob();
+            const audioBlob = await audioResponse.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
+
+            // Animación del asistente Alex
+            asistenteAlex.classList.add('is-speaking'); // Añadir la clase para activar animación mientras habla
             audio.play();
+
+            // Quitar animación cuando Alex deja de hablar
+            audio.onended = () => {
+                asistenteAlex.classList.remove('is-speaking');
+            }
     
-            // Como ya no recibimos el texto, no podemos mostrarlo.
-            // Podríamos mostrar un mensaje genérico para que el usuario sepa que hay una respuesta.
-            appendMessage("...", 'bot-message');
     
         } catch (error) {
             console.error('Error:', error);
@@ -109,6 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Desplegar el chat al hacer click en el asistente Alex
+    asistenteAlex.addEventListener('click', () => {
+        chatWrapper.classList.toggle('visible');
+
+        if (chatWrapper.classList.contains('visible')){
+            chatInput.focus(); 
+        }
+
+    });
+
     function appendMessage(message, className) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', className);
@@ -117,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(p);
         chatBox.appendChild(messageElement);
         chatBox.scrollTop = chatBox.scrollHeight;
+        return messageElement; // Se devuelve el elemento para poder actualizarlo
     }
 
     function ejecutarAccion(action) {

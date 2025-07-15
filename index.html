@@ -8,6 +8,34 @@
 </head>
 
 <body>
+    <!--Asistente Alex (imagén)-->
+    <div id="asistente-alex">
+        <img src="AlexIcono.jpg" alt="Asistente Alex">
+    </div>
+
+    <!--Cuadro de diálogo de Alex-->
+    <div id="chat-wrapper">
+        <!--Contenerdor del chat-->
+        <div id="chat-container">
+            <!--Caja de diálogo (Preguntas y respuestas)-->
+            <div id="chat-box">
+                <div class="message bot-message">
+                    <p>Hola, soy Álex. ¿Quieres que te ayude?</p>
+                </div>
+            </div>
+
+            <!--Cuadro entrada de texto, micrófono y botón de enviar-->
+            <div id="input-container">
+                <input type="text" id="chat-input" placeholder="Escribe o pulsa el micro...">
+                <button id="mic-btn">🎤</button>
+                <button id="send-btn">Enviar</button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!--Web de prueba-->
     <div id="info-sections">
         <div id="seccion-uno" class="info-box">
             <h2>Sección Uno</h2>
@@ -17,20 +45,6 @@
             <h2>Sección Dos</h2>
             <p>Este es el segundo bloque de información. Prueba a pedirle a Álex que te lo muestre.</p>
         </div>
-    </div>
-
-    <div id="chat-container">
-        <div id="chat-box">
-            <div class="message bot-message">
-                <p>Hola, soy Álex. ¿Quieres que te ayude?</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="input-container">
-        <input type="text" id="chat-input" placeholder="Escribe o pulsa el micro...">
-        <button id="mic-btn">🎤</button>
-        <button id="send-btn">Enviar</button>
     </div>
 
     <script src="script.js"></script>

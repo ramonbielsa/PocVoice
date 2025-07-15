@@ -15,7 +15,7 @@ app.use(express.json()); // Permite al servidor entender JSON
 
 // Configuración de Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const elevenLabs = new ElevenLabs({
     apiKey: process.env.ELEVENLABS_API_KEY,
@@ -57,18 +57,21 @@ Usuario: “Quiero ver la sección de preguntas frecuentes”
  "Lo siento, no he encontrado una sección llamada 'preguntas frecuentes'. Puedes pedirme ver Inicio, Servicios o Contacto."
 `;
 
+//DEBEMOS HACER 2 LLAMADAS PARA OBTENER RESPUESTA DE TEXTO Y AUDIO
+// Obtener respuesta de texto de Gemini
 app.post('/chat', async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, history } = req.body; //Recibir el historial
         if (!message) {
             return res.status(400).json({ error: 'El mensaje es requerido.' });
         }
 
         // Creamos un historial de conversación para darle contexto a Gemini
-        const chat = model.startChat({
+        const chat = geminiModel.startChat({
             history: [
                 { role: "user", parts: [{ text: systemInstruction }] },
-                { role: "model", parts: [{ text: "Entendido. Estoy listo para ayudar y usar mis habilidades especiales." }] }
+                { role: "model", parts: [{ text: "Entendido. Estoy listo." }] },
+                ...history
             ]
         });
 
@@ -77,15 +80,30 @@ app.post('/chat', async (req, res) => {
         const response = await result.response;
         const textReplyFromGemini = response.text();
 
+        // Devolver el texto en formato JSON
+        res.json({ replyText: textReplyFromGemini });
+
+
+
+    } catch (error) {
+        console.error('Error en el chat: ', error);
+        res.status(500).json({ error: 'No se pudo obtener una respuesta de texto.' });
+    }
+});
+
+// Obetener la respuesta de audio de Gemini
+app.post('/text-to-speech', async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) {
+            return res.status(400).json({ error: 'El texto es requerido.' });
+        }
+
         // Convertir el texto a audio con ElevenLabs
         const audioStream = await elevenLabs.textToSpeechStream({
-            textInput: textReplyFromGemini,
+            textInput: text,
             voiceId: "Nh2zY9kknu6z4pZy6FhD", //Voz de David Martín
-            modelId: "eleven_multilingual_v2",
-            voiceSettings: {
-                stability: 0.5,
-                similarityBoost: 0.75,
-            },
+            modelId: "eleven_multilingual_v2"
         });
 
         // Enviar el audio como respuesta al frontend
@@ -93,10 +111,11 @@ app.post('/chat', async (req, res) => {
         audioStream.pipe(res);
 
     } catch (error) {
-        console.error('Error al contactar las APIs: ', error);
-        res.status(500).json({ error: 'No se pudo obtener una respuesta.' });
+        console.error('Error en /text-to-speech:', error);
+        res.status(500).json({ error: 'No se pudo obtener una respuesta de audio.' });
     }
 });
+
 
 app.listen(port, () => {
     console.log(`Servidor escuchando en http://localhost:${port}`);

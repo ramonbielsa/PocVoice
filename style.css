@@ -7,7 +7,51 @@ body {
     height: 100vh;
     margin: 0;
 }
+ /*ASISTENTE ALEX*/
+#asistente-alex {
+    position: fixed; /* Lo fija en la pantalla */
+    bottom: 20px;
+    right: 20px;
+    width: 80px; /* Tamaño del círculo */
+    height: 80px;
+    background-color: #007bff;
+    border-radius: 50%; /* Lo hace redondo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    z-index: 1000; /* Se asegura de que esté por encima de otros elementos */
+}
 
+#asistente-alex img {
+    width: 90%;
+    height: auto;
+}
+
+#asistente-alex:hover {
+    transform: scale(1.1); /* Efecto de crecimiento al pasar el ratón */
+}
+
+/* Animación para cuando el asistente "habla" */
+#asistente-alex.is-speaking {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(0, 123, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+    }
+}
+
+/*WEB DE PRUEBA*/
 #info-sections {
     position: absolute;
     top: 20px;
@@ -29,15 +73,42 @@ body {
     border-radius: 8px;
 }
 
-#chat-container {
+#chat-wrapper {
+    position: fixed;
+    bottom: 110px; /* Justo encima del asistente (80px de alto + 20px de espacio + 10px de margen) */
+    right: 20px;
     width: 90%;
-    max-width: 600px;
-    height: 80vh;
+    max-width: 400px; /* Más compacto */
+    height: 500px;
     background-color: white;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     display: flex;
     flex-direction: column;
+    z-index: 999;
+
+    /* Oculto por defecto con una transición suave */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all 0.3s ease-in-out;
+}
+
+/* Clase que se añade con JS para mostrar el chat */
+#chat-wrapper.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+#chat-container {
+    display: flex;
+    flex-direction: column; /* Apila los elementos verticalmente */
+    height: 100%; /* Asegúrate de que ocupe toda la altura del wrapper */
+    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden; /* Oculta cualquier cosa que se desborde */
 }
 
 #chat-box {
@@ -72,8 +143,9 @@ body {
 
 #input-container {
     display: flex;
-    padding: 15px;
-    border-top: 1px solid #ddd;
+    padding: 10px;
+    background-color: #fff;
+    border-top: 1px solid #f0f0f0;
 }
 
 #chat-input {
