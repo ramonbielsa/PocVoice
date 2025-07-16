@@ -23,11 +23,10 @@ const elevenLabs = new ElevenLabs({
 
 // INSTRUCCIÓN DEL SISTEMA: Aquí le enseñamos a Gemini sus capacidades (Prompt)
 const systemInstruction = `
-Eres "Guía Web", el asistente interactivo de esta página. Tu misión es ayudar a los usuarios a navegar, ver y leer el contenido de la página de forma clara y accesible. Tu tono debe ser amable, directo y servicial.
+Eres "Guía Web", el asistente interactivo de esta página. Tu misión es ayudar a los usuarios a navegar, ver, leer y explicar el contenido de la página de forma clara y accesible. Tu tono debe ser amable, directo y servicial.
 La página está dividida en las siguientes secciones:
-Inicio, con el selector: #seccion-uno
-Servicios, con el selector: #seccion-dos
-Contacto, con el selector: #seccion-tres
+Sección uno, con el selector: #seccion-uno
+Sección dos, con el selector: #seccion-dos
 :cuadrado_amarillo_grande: REGLAS CLARAS:
 Si el usuario dice cosas como "muéstrame", "ve a", "enséñame", "quiero ver" una sección:
 Interpreta que quiere desplazarse a esa sección y verla.
@@ -44,29 +43,35 @@ Respóndele amablemente con algo como:
 Si el usuario hace una pregunta fuera del contexto de la página (por ejemplo, "¿Qué tiempo hace?" o "¿Quién ganó el partido?"):
 Respóndele en texto normal como cualquier otro asistente conversacional.
 :círculo_verde_grande: EJEMPLOS
-Usuario: “Muéstrame la sección de servicios”
+Usuario: “Muéstrame la sección uno”
  Respuesta:
- "Claro, aquí tienes la sección de servicios."
- [Mostrar o resaltar el contenido de #seccion-dos]
-Usuario: “Léeme el contenido de contacto”
+ "Claro, aquí tienes la sección de uno."
+ [Mostrar o resaltar el contenido de #seccion-uno]
+Usuario: “Léeme el contenido dos”
  Respuesta:
- "Con gusto, este es el contenido de la sección de contacto:"
- [Aquí muestras el contenido real de #seccion-tres]
+ "Con gusto, este es el contenido de la sección dos:"
+ [Aquí muestras el contenido real de #seccion-dos]
 Usuario: “Quiero ver la sección de preguntas frecuentes”
  Respuesta:
- "Lo siento, no he encontrado una sección llamada 'preguntas frecuentes'. Puedes pedirme ver Inicio, Servicios o Contacto."
+ "Lo siento, no he encontrado una sección llamada 'preguntas frecuentes'. Puedes pedirme ver Sección uno o sección dos."
 `;
 
 //DEBEMOS HACER 2 LLAMADAS PARA OBTENER RESPUESTA DE TEXTO Y AUDIO
 // Obtener respuesta de texto de Gemini
+// OBTENER RESPUESTA DE TEXTO DE GEMINI (VERSIÓN CON STREAMING)
 app.post('/chat', async (req, res) => {
     try {
-        const { message, history } = req.body; //Recibir el historial
+        const { message, history } = req.body;
         if (!message) {
             return res.status(400).json({ error: 'El mensaje es requerido.' });
         }
 
-        // Creamos un historial de conversación para darle contexto a Gemini
+        // 1. Configurar cabeceras para Server-Sent Events (SSE)
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Cache-Control', 'no-cache');
+
+        // 2. Iniciar el chat con el historial
         const chat = geminiModel.startChat({
             history: [
                 { role: "user", parts: [{ text: systemInstruction }] },
@@ -75,19 +80,22 @@ app.post('/chat', async (req, res) => {
             ]
         });
 
-        // Recogemos la respuesta de texto de Gemini
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        const textReplyFromGemini = response.text();
+        // 3. Obtener el stream de Gemini
+        const result = await chat.sendMessageStream(message);
 
-        // Devolver el texto en formato JSON
-        res.json({ replyText: textReplyFromGemini });
+        // 4. Enviar cada fragmento de texto al frontend
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            // Formato SSE: "data: {json}\n\n"
+            res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+        }
 
-
+        // 5. Señal de finalización (opcional pero buena práctica)
+        res.end();
 
     } catch (error) {
-        console.error('Error en el chat: ', error);
-        res.status(500).json({ error: 'No se pudo obtener una respuesta de texto.' });
+        console.error('Error en el chat con streaming: ', error);
+        res.end(); // Cerramos la conexión si hay un error
     }
 });
 

@@ -80,66 +80,97 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userMessage === '') return;
     
         appendMessage(userMessage, 'user-message');
-        conversationHistory.push({role: 'user', parts: [{text: userMessage}]});
+        // Añadimos el mensaje al historial para que Gemini tenga contexto
+        conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
         chatInput.value = '';
-
-        // Mostrar indicador de espera (Pensando...)
-        const thinkingMessage = appendMessage("...", 'bot-message');
+    
+        // 1. Añadimos el mensaje de "pensando..." que se irá actualizando
+        const botMessageElement = appendMessage("...", 'bot-message');
+        let fullBotResponse = ""; // Aquí guardaremos la respuesta completa
     
         try {
-            //Petición para obtener respuesta de texto
-            const textResponse = await fetch(backendUrl, {
+            // 2. Hacemos la petición POST al endpoint de chat (que ahora es un stream)
+            const response = await fetch(backendUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: userMessage, history: conversationHistory }),
+                body: JSON.stringify({ 
+                    message: userMessage, 
+                    // Enviamos el historial SIN el último mensaje del usuario para no duplicarlo
+                    history: conversationHistory.slice(0, -1) 
+                }),
             });
     
-            if (!textResponse.ok) {
-                throw new Error('Error en la respuesta del servidor.');
+            // 3. Leemos el stream que nos llega del servidor
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+    
+            // Función recursiva para procesar el stream
+            function processStream() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        // El stream ha terminado, ahora generamos el audio
+                        console.log("Stream de texto finalizado.");
+                        conversationHistory.push({ role: 'model', parts: [{ text: fullBotResponse }] });
+                        playElevenLabsAudio(fullBotResponse); // Llamamos a la función de audio
+                        return;
+                    }
+    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n').filter(line => line.trim() !== '');
+    
+                    lines.forEach(line => {
+                        if (line.startsWith('data:')) {
+                            const data = JSON.parse(line.substring(5));
+                            fullBotResponse += data.text;
+                            // Actualizamos el contenido del párrafo en tiempo real
+                            botMessageElement.querySelector('p').textContent = fullBotResponse;
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    });
+                    
+                    // Continuamos leyendo el siguiente fragmento
+                    processStream();
+                }).catch(error => {
+                    console.error('Error leyendo el stream:', error);
+                    botMessageElement.querySelector('p').textContent = "Hubo un error al recibir la respuesta.";
+                });
             }
-
-            const data = await textResponse.json();
-            const botText = data.replyText;
-
-            // Actualizar mensaje
-            thinkingMessage.querySelector('p').textContent = botText;
-            conversationHistory.push({role: 'model', parts: [{text: botText}]});
-
-            //Petición para obtener respuesta de audio
+            
+            processStream();
+    
+        } catch (error) {
+            console.error('Error en sendMessage:', error);
+            botMessageElement.querySelector('p').textContent = 'Lo siento, algo salió mal.';
+        }
+    }
+    
+    async function playElevenLabsAudio(text) {
+        if (!text) return;
+    
+        try {
             const audioResponse = await fetch('http://localhost:3000/text-to-speech', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text: botText }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }),
             });
-
+    
             if (!audioResponse.ok) throw new Error('Error al obtener la respuesta de audio.');
-
-
-            // Ya no leemos JSON. Ahora manejamos audio.
+    
             const audioBlob = await audioResponse.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
-
-            // Animación del asistente Alex
-            asistenteAlex.classList.add('is-speaking'); // Añadir la clase para activar animación mientras habla
+    
+            asistenteAlex.classList.add('is-speaking');
             audio.play();
-
-            // Quitar animación cuando Alex deja de hablar
+            
             audio.onended = () => {
                 asistenteAlex.classList.remove('is-speaking');
-            }
-    
+            };
     
         } catch (error) {
-            console.error('Error:', error);
-            const errorMessage = 'Lo siento, algo salió mal. Inténtalo de nuevo.';
-            appendMessage(errorMessage, 'bot-message');
-            // La función original de leerTexto() se puede dejar para leer solo los errores
-            leerTexto(errorMessage);
+            console.error('Error al reproducir audio de ElevenLabs:', error);
         }
     }
 
