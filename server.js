@@ -3,6 +3,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const ElevenLabs = require('elevenlabs-node');
+const { FaissStore } = require("@langchain/community/vectorstores/faiss");
+const { GoogleGenerativeAIEmbeddings } = require("@langchain/google-genai");
 
 dotenv.config(); // Carga las variables de entorno (la API key)
 
@@ -67,6 +69,24 @@ El JSON debe tener dos claves: "action" y "selector".
 Si el usuario solo conversa, responde normalmente sin el bloque JSON. Usa tu capacidad de visión para responder preguntas sobre lo que se ve en la pantalla.
 Debes dar respuestas breves, sin extenderte demasido.
 `;
+
+const VECTOR_STORE_PATH = './vector_store';
+let vectorStore;
+
+async function loadVectorStore() {
+    try {
+        console.log("Cargando la base de datos de conocimiento (Vector Store)...");
+        const embeddings = new GoogleGenerativeAIEmbeddings({
+            apiKey: process.env.GEMINI_API_KEY,
+            model: "embedding-001",
+        });
+        vectorStore = await FaissStore.load(VECTOR_STORE_PATH, embeddings);
+        console.log("¡Base de datos de conocimiento cargada con éxito!");
+    } catch (error) {
+        console.error("Error al cargar la base de datos vectorial. Asegúrate de haber ejecutado 'node ingest.js' primero.", error);
+        process.exit(1);
+    }
+}
 
 //DEBEMOS HACER 2 LLAMADAS PARA OBTENER RESPUESTA DE TEXTO Y AUDIO
 // Obtener respuesta de texto de Gemini
