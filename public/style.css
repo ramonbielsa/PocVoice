@@ -169,7 +169,7 @@ body {
     background-color: #0056b3;
 }
 
-#mic-btn {
+#mic-btn, #screen-share-btn {
     padding: 10px 12px;
     font-size: 1.2rem;
     background-color: #007bff;
@@ -186,4 +186,11 @@ body {
 
 #mic-btn.is-listening {
     background-color: #dc3545; /* Rojo cuando está escuchando */
+}
+
+/* Estilo para botones activos */
+#mic-btn.active, #screen-share-btn.active {
+    background-color: #e60023; /* Un color rojo para indicar que está grabando */
+    color: white;
+    box-shadow: 0 0 10px #e60023;
 }
